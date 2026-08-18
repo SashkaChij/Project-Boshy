@@ -20,9 +20,15 @@ npm test         # физика, формат уровней, реплеи, undo
 npm run build    # статическая сборка в dist/
 ```
 
-Игра — статический сайт без бэкенда. Пуш в ветку публикует её на GitHub Pages
-(`.github/workflows/deploy.yml`). Один раз нужно включить Pages в настройках репозитория:
-**Settings → Pages → Source: GitHub Actions**.
+Игра — статический сайт без бэкенда. Пуш в ветку собирает и публикует её на GitHub Pages
+(`.github/workflows/deploy.yml`).
+
+> **Нужно сделать один раз, вручную:** откройте
+> **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+> Пока это не включено, деплой падает на шаге `configure-pages` с ошибкой
+> `Create Pages site failed: Resource not accessible by integration` — токену Actions не
+> разрешено создавать сайт Pages самому. Сборка и тесты при этом проходят; после включения
+> следующий пуш выложит игру на `https://sashkachij.github.io/Project-Boshy/`.
 
 ## Управление
 

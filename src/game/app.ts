@@ -1,6 +1,6 @@
 import { TICK_MS, VIEW_H, VIEW_W } from '../core/constants.js'
 import { validateLevel } from '../core/level.js'
-import { ReplayRecorder } from '../core/replay.js'
+import { ReplayRecorder, verifyReplay } from '../core/replay.js'
 import { createWorld, respawn } from '../core/sim/world.js'
 import { step } from '../core/sim/step.js'
 import { DIFF_IMPOSSIBLE, DIFF_MEDIUM, type LevelData, type World } from '../core/types.js'
@@ -9,6 +9,7 @@ import { formatTicks, getLocale, setLocale, t, tp } from '../i18n/index.js'
 import { buildAtlas, type Atlas } from '../platform/atlas.js'
 import { initAudio, playMusic, playSfx, setMusicVolume, setSfxVolume, stopMusic, type TrackName } from '../platform/audio/index.js'
 import { createDisplay, type Display } from '../platform/display.js'
+import { decodeLevelCode } from '../platform/share.js'
 import { attachKeyboard } from '../platform/input/keyboard.js'
 import { InputAccumulator } from '../platform/input/state.js'
 import { attachTouch, type TouchController } from '../platform/input/touch.js'
@@ -183,7 +184,6 @@ export class App {
   private async storeVerifiedClear(w: World, s: PlaySession): Promise<void> {
     try {
       const replay = s.recorder.finish(s.level, w.difficulty, w.assist, 0x1337c0de)
-      const { verifyReplay } = await import('../core/replay.js')
       const result = verifyReplay(s.level, replay)
       if (!result.ok) return
 
@@ -385,7 +385,6 @@ export class App {
     const input = prompt(t('editor.codePasteTitle'))
     if (!input) return
     try {
-      const { decodeLevelCode } = await import('../platform/share.js')
       const level = await decodeLevelCode(input)
       this.playCustomLevel(level, 'gallery')
     } catch {
