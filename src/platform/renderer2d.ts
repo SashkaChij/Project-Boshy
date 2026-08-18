@@ -1,5 +1,4 @@
 import { ROOM_H, ROOM_W, TILE, VIEW_H, VIEW_W } from '../core/constants.js'
-import { playerBox } from '../core/collide.js'
 import { ENTITY_DEFS } from '../core/registry/entityDefs.js'
 import { prop } from '../core/registry/entityDefs.js'
 import { SAVE_FLASH_TICKS } from '../core/sim/entities.js'
@@ -233,18 +232,26 @@ export function createRenderer(ctx: CanvasRenderingContext2D, atlas: Atlas): Ren
       particles.draw(ctx)
       ctx.drawImage(baked.front, 0, 0)
 
-      // Signs speak only when you are next to them, so a room full of taunts
-      // does not become a wall of text.
-      const pb = playerBox(w.player.x, w.player.y, w.player.gravDir)
+      // Only the NEAREST sign speaks. Two signs within a screen of each other
+      // used to print their taunts on top of one another, leaving an unreadable
+      // smear exactly where the game is trying to tell you something.
+      let nearest: Entity | null = null
+      let nearestDist = Infinity
       for (const e of w.entities) {
         if (e.t !== 'sign' || !e.alive) continue
-        if (Math.abs(e.x - w.player.x) > 90 || Math.abs(e.y - w.player.y) > 70) continue
-        const msg = tauntFor(e.p['text'] ?? 0)
-        drawText(ctx, msg, e.x, e.y - 40, {
+        const dx = Math.abs(e.x - w.player.x)
+        const dy = Math.abs(e.y - w.player.y)
+        if (dx > 110 || dy > 80) continue
+        const d = dx + dy
+        if (d < nearestDist) { nearestDist = d; nearest = e }
+      }
+      if (nearest) {
+        const msg = tauntFor(nearest.p['text'] ?? 0)
+        const cx = Math.max(120, Math.min(VIEW_W - 120, nearest.x))
+        drawText(ctx, msg, cx, nearest.y - 44, {
           scale: 2, align: 'center', color: '#f5e6c8', shadow: '#000000',
         })
       }
-      void pb
     },
   }
 }

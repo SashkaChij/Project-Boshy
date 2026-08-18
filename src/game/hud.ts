@@ -12,28 +12,33 @@ import { drawText, measureText } from '../platform/text.js'
  * turn it off. It is also, in practice, the main feedback loop -- players
  * measure a room by how many deaths it cost.
  */
-export function drawHud(ctx: CanvasRenderingContext2D, w: World): void {
+export function drawHud(
+  ctx: CanvasRenderingContext2D,
+  w: World,
+  crop: { top: number; bottom: number } = { top: 0, bottom: 0 },
+): void {
   const deaths = tp('hud.deaths', w.deaths)
   const time = formatTicks(w.tick)
 
+  const top = crop.top
   ctx.fillStyle = 'rgba(0,0,0,0.55)'
-  ctx.fillRect(0, 0, VIEW_W, 30)
+  ctx.fillRect(0, top, VIEW_W, 30)
 
-  drawText(ctx, deaths, 12, 8, { scale: 2, color: '#ff6b6b', shadow: '#000' })
-  drawText(ctx, time, VIEW_W - 12, 8, { scale: 2, color: '#e8e2d4', align: 'right', shadow: '#000' })
+  drawText(ctx, deaths, 12, top + 8, { scale: 2, color: '#ff6b6b', shadow: '#000' })
+  drawText(ctx, time, VIEW_W - 12, top + 8, { scale: 2, color: '#e8e2d4', align: 'right', shadow: '#000' })
 
   if (w.assist) {
     const label = t('hud.assist')
     const x = VIEW_W / 2 - measureText(label, { scale: 2 }) / 2
-    drawText(ctx, label, x, 8, { scale: 2, color: '#6fd3ff', shadow: '#000' })
+    drawText(ctx, label, x, top + 8, { scale: 2, color: '#6fd3ff', shadow: '#000' })
   }
 
-  drawBossBar(ctx, w)
+  drawBossBar(ctx, w, crop.bottom)
 
   if (w.player.dead) drawDeathOverlay(ctx, w)
 }
 
-function drawBossBar(ctx: CanvasRenderingContext2D, w: World): void {
+function drawBossBar(ctx: CanvasRenderingContext2D, w: World, cropBottom: number): void {
   const boss = w.entities.find((e) => e.t === 'boss' && e.alive)
   if (!boss) return
   const def = ENTITY_DEFS['boss']
@@ -42,7 +47,7 @@ function drawBossBar(ctx: CanvasRenderingContext2D, w: World): void {
 
   const barW = VIEW_W - 160
   const x = 80
-  const y = VIEW_H - 34
+  const y = VIEW_H - cropBottom - 34
 
   ctx.fillStyle = 'rgba(0,0,0,0.6)'
   ctx.fillRect(x - 4, y - 4, barW + 8, 22)

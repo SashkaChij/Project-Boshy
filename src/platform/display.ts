@@ -13,6 +13,12 @@ export interface ViewMetrics {
   hasSideMargins: boolean
 }
 
+export interface CropRows {
+  /** Pixels hidden at the top and bottom of the 800x608 buffer. */
+  top: number
+  bottom: number
+}
+
 export interface Display {
   /** Draw here. Always exactly 800x608 logical pixels. */
   readonly ctx: CanvasRenderingContext2D
@@ -22,6 +28,17 @@ export interface Display {
   present(): void
   /** Reserve space at the bottom for a touch deck; the game shrinks to fit. */
   setReservedBottom(px: number): void
+  /**
+   * Hide rows that are structurally wall, so the playfield can be bigger.
+   *
+   * A 800x608 room is 1.32:1 against a phone's 2.16:1, which pins the playfield
+   * to 61% of the screen width with all 19 rows showing. Cropping the top and
+   * bottom rows -- only ever rows that are solid across the whole room -- buys
+   * back about a fifth of the area, and it is the only lever that does not
+   * either hide a hazard or break the genre's read-the-whole-screen contract.
+   */
+  setCrop(crop: CropRows): void
+  readonly crop: CropRows
   /** Convert a client-space point into 800x608 game space. */
   toGame(clientX: number, clientY: number): { x: number; y: number }
   onResize(fn: (m: ViewMetrics) => void): () => void
@@ -52,6 +69,7 @@ export function createDisplay(display: HTMLCanvasElement): Display {
   dctx.imageSmoothingEnabled = false
 
   let reservedBottom = 0
+  let crop: CropRows = { top: 0, bottom: 0 }
   let m: ViewMetrics = {
     gameX: 0, gameY: 0, gameW: VIEW_W, gameH: VIEW_H,
     viewW: VIEW_W, viewH: VIEW_H, scale: 1, hasSideMargins: false,
@@ -63,9 +81,10 @@ export function createDisplay(display: HTMLCanvasElement): Display {
     const viewH = Math.max(1, display.clientHeight || window.innerHeight)
     const availH = Math.max(1, viewH - reservedBottom)
 
-    const scale = Math.min(viewW / VIEW_W, availH / VIEW_H)
+    const srcH = VIEW_H - crop.top - crop.bottom
+    const scale = Math.min(viewW / VIEW_W, availH / srcH)
     const gameW = Math.floor(VIEW_W * scale)
-    const gameH = Math.floor(VIEW_H * scale)
+    const gameH = Math.floor(srcH * scale)
     const gameX = Math.floor((viewW - gameW) / 2)
     const gameY = Math.floor((availH - gameH) / 2)
 
@@ -89,7 +108,11 @@ export function createDisplay(display: HTMLCanvasElement): Display {
   function present(): void {
     dctx.fillStyle = '#000000'
     dctx.fillRect(0, 0, m.viewW, m.viewH)
-    dctx.drawImage(buffer, m.gameX, m.gameY, m.gameW, m.gameH)
+    dctx.drawImage(
+      buffer,
+      0, crop.top, VIEW_W, VIEW_H - crop.top - crop.bottom,
+      m.gameX, m.gameY, m.gameW, m.gameH,
+    )
   }
 
   const onWindowResize = (): void => resize()
@@ -108,10 +131,18 @@ export function createDisplay(display: HTMLCanvasElement): Display {
       reservedBottom = px
       resize()
     },
+    setCrop(next: CropRows) {
+      if (next.top === crop.top && next.bottom === crop.bottom) return
+      crop = { top: next.top, bottom: next.bottom }
+      resize()
+    },
+    get crop() {
+      return crop
+    },
     toGame(clientX: number, clientY: number) {
       const rect = display.getBoundingClientRect()
       const x = (clientX - rect.left - m.gameX) / m.scale
-      const y = (clientY - rect.top - m.gameY) / m.scale
+      const y = (clientY - rect.top - m.gameY) / m.scale + crop.top
       return { x, y }
     },
     onResize(fn) {
