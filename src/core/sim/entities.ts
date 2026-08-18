@@ -1,6 +1,6 @@
 import {
   BULLET_HALF, FALLBLOCK_SPEED, MAX_PROJECTILES, REFRESHER_RESPAWN, RISEBLOCK_SPEED,
-  TILE, VIEW_H, VIEW_W,
+  SAVE_COOLDOWN, TILE, VIEW_H, VIEW_W,
 } from '../constants.js'
 import { boxBlocked, playerBox, type SolidRect } from '../collide.js'
 import { SIN_STEPS, isqrt, lutCos, lutSin, sign } from '../math.js'
@@ -80,7 +80,10 @@ function solidPoint(w: World, px: number, py: number): boolean {
 
 export const BEHAVIOURS: Record<string, Behaviour> = {
   save(w, e, def) {
-    if (e.state === 1) return
+    // `phase` counts DOWN the save flash. It starts at zero so a freshly
+    // loaded room shows no flash at all -- driving the flash off a count-up
+    // timer made every save point on screen light up on entry and stay lit.
+    if (e.phase > 0) e.phase--
     if (overlapsPlayer(w, e, def) && w.player.saveCooldown === 0) {
       doSave(w, e)
     }
@@ -396,11 +399,13 @@ function ridingPlatform(w: World, e: Entity, def: EntityDef): boolean {
   return pb.r >= eb.l && pb.l <= eb.r && Math.abs(pb.b - eb.t) <= 2
 }
 
+export const SAVE_FLASH_TICKS = 25
+
 export function doSave(w: World, e: Entity): void {
   const p = w.player
   w.save = { room: w.room, x: p.x, y: p.y, gravDir: p.gravDir, tick: w.tick }
-  p.saveCooldown = 30
-  e.timer = 0
+  p.saveCooldown = SAVE_COOLDOWN
+  e.phase = SAVE_FLASH_TICKS
   w.events.push({ k: 'save', x: e.x, y: e.y })
 }
 

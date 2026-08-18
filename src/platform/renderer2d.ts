@@ -2,6 +2,7 @@ import { ROOM_H, ROOM_W, TILE, VIEW_H, VIEW_W } from '../core/constants.js'
 import { playerBox } from '../core/collide.js'
 import { ENTITY_DEFS } from '../core/registry/entityDefs.js'
 import { prop } from '../core/registry/entityDefs.js'
+import { SAVE_FLASH_TICKS } from '../core/sim/entities.js'
 import type { Entity, World } from '../core/types.js'
 import type { Atlas } from './atlas.js'
 import { drawText } from './text.js'
@@ -139,11 +140,12 @@ export function createRenderer(ctx: CanvasRenderingContext2D, atlas: Atlas): Ren
     }
     atlas.draw(ctx, sprite, e.x, e.y)
 
-    if (e.t === 'save' && e.timer < 25) {
-      // Save flash: brief, bright, unmistakable.
-      ctx.globalAlpha = 1 - e.timer / 25
+    if (e.t === 'save' && e.phase > 0) {
+      // Save flash: brief, bright, and sized to the sprite so it reads as the
+      // lantern igniting rather than as a white box dropped on the room.
+      ctx.globalAlpha = (e.phase / SAVE_FLASH_TICKS) * 0.85
       ctx.fillStyle = '#ffffff'
-      ctx.fillRect(e.x - 20, e.y - 20, 40, 40)
+      ctx.fillRect(e.x - def.w / 2, e.y - def.h / 2, def.w, def.h)
       ctx.globalAlpha = 1
     }
     void w
