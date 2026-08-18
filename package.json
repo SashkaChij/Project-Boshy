@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b --force",
     "lint": "eslint .",
-    "smoke": "node tools/smoke.mjs"
+    "smoke": "node tools/smoke.mjs",
+    "spritesheet": "node tools/spritesheet.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

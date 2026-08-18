@@ -343,9 +343,25 @@ export class App {
       action: () => this.playCustomLevel(lv.data, 'gallery'),
       hint: () => t('gallery.play'),
     }))
+    // Codes arrive by chat as often as by link, and a player who is handed one
+    // otherwise has nowhere to put it outside the editor.
+    items.push({ label: () => t('editor.pasteCode'), action: () => void this.promptLevelCode() })
     items.push({ label: () => t('menu.editor'), action: () => this.onOpenEditor?.() })
     items.push({ label: () => t('menu.back'), action: () => this.setScene('title') })
     this.menus.set('gallery', new Menu(items))
+  }
+
+  private async promptLevelCode(): Promise<void> {
+    const input = prompt(t('editor.codePasteTitle'))
+    if (!input) return
+    try {
+      const { decodeLevelCode } = await import('../platform/share.js')
+      const level = await decodeLevelCode(input)
+      this.playCustomLevel(level, 'gallery')
+    } catch {
+      playSfx('error')
+      this.showToast(t('editor.importFailed'))
+    }
   }
 
   private bumpVolume(key: 'musicVolume' | 'sfxVolume', delta: number): void {
