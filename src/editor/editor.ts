@@ -658,7 +658,7 @@ export function createEditor(opts: EditorOptions): EditorApi {
   function toRoom(clientX: number, clientY: number): { px: number; py: number; tx: number; ty: number } {
     const rect = canvas.getBoundingClientRect()
     const zoom = state.camera.zoom
-    let px = (clientX - rect.left - state.camera.x) / zoom
+    const px = (clientX - rect.left - state.camera.x) / zoom
     let py = (clientY - rect.top - state.camera.y) / zoom
     // Touch: shift the effective point above the fingertip so the target cell
     // is visible while you place it.

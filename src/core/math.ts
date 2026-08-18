@@ -44,6 +44,10 @@ const SIN_SCALE = 65536
 const SIN_LUT: Int32Array = (() => {
   const t = new Int32Array(SIN_STEPS)
   for (let i = 0; i < SIN_STEPS; i++) {
+    // The single sanctioned Math.sin in the core: it runs once at module load,
+    // before any tick can observe it, so the resulting integer table is
+    // identical on every engine by the time a replay depends on it.
+    // eslint-disable-next-line no-restricted-properties
     t[i] = Math.round(Math.sin((i / SIN_STEPS) * Math.PI * 2) * SIN_SCALE)
   }
   return t
