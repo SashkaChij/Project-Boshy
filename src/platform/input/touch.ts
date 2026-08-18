@@ -1,3 +1,4 @@
+import { VIEW_H, VIEW_W } from '../../core/constants.js'
 import { IN_JUMP, IN_LEFT, IN_RESTART, IN_RIGHT, IN_SHOOT } from '../../core/types.js'
 import type { InputAccumulator } from './state.js'
 
@@ -434,13 +435,29 @@ export function attachTouch(acc: InputAccumulator, host: HTMLElement): TouchCont
 
   function computeLayout(view: DeckView): { rects: TouchLayout; reserve: number } {
     const inset = safeInsets()
-    const leftMargin = view.gameX - inset.left
-    const rightMargin = view.viewW - (view.gameX + view.gameW) - inset.right
     const usableH = view.viewH - inset.top - inset.bottom
     const bottom = view.viewH - inset.bottom - PAD
+    /** Lowest y the fire cluster may reach, so it can never meet RESTART. */
+    const fireTop = inset.top + PAD + MIN_TOUCH + 4 + GAP
 
+    // Buttons are placed against the play rectangle we were actually handed...
+    const leftMargin = view.gameX - inset.left
+    const rightMargin = view.viewW - (view.gameX + view.gameW) - inset.right
+
+    // ...but WHICH layout to use is decided on the reserve-free projection of
+    // that rectangle. Choosing the bottom deck makes the shell shrink the game,
+    // which widens the side margins, which would then qualify for side mode,
+    // which reserves nothing, which widens the game again: an oscillation that
+    // never settles. Gating on viewW/viewH alone makes the choice a pure
+    // function of the screen. A reserve can only ever shrink the game, so the
+    // real margins are never narrower than the ones this gate measured.
+    const natScale = Math.min(view.viewW / VIEW_W, view.viewH / VIEW_H)
+    const natW = Math.floor(VIEW_W * natScale)
+    const natX = Math.floor((view.viewW - natW) / 2)
     const sideMode =
-      leftMargin >= SIDE_MIN_LEFT && rightMargin >= SIDE_MIN_RIGHT && usableH >= 200
+      natX - inset.left >= SIDE_MIN_LEFT &&
+      view.viewW - (natX + natW) - inset.right >= SIDE_MIN_RIGHT &&
+      usableH >= 200
 
     const rects = emptyLayout()
 
@@ -448,7 +465,7 @@ export function attachTouch(acc: InputAccumulator, host: HTMLElement): TouchCont
       // --- LEFT MARGIN: the direction slab, parked at the bottom where the
       // left thumb naturally rests.
       const dTotal = Math.min(leftMargin - 2 * PAD, 220)
-      const dh = clamp(Math.round(usableH * 0.36), MIN_TOUCH * 2, 180)
+      const dh = clamp(Math.round(usableH * 0.36), MIN_TOUCH * 2, Math.min(180, bottom - PAD))
       const dx = inset.left + PAD + Math.max(0, (leftMargin - 2 * PAD - dTotal) / 2)
       const dy = bottom - dh
       const half = Math.round(dTotal / 2)
@@ -458,24 +475,32 @@ export function attachTouch(acc: InputAccumulator, host: HTMLElement): TouchCont
       // --- RIGHT MARGIN: JUMP is the biggest target on screen, SHOOT beside it.
       const rx = view.gameX + view.gameW + PAD
       const rw = rightMargin - 2 * PAD
-      const jh = clamp(Math.round(usableH * 0.42), MIN_TOUCH * 2, 200)
-      const sideBySide = rw >= 2 * MIN_TOUCH + GAP
-      if (sideBySide) {
-        const jw = Math.max(MIN_TOUCH, Math.round(rw * 0.58))
-        const sw = rw - jw - GAP
-        const sh = Math.round(jh * 0.74)
+      const avail = bottom - fireTop
+      const jw = Math.max(MIN_TOUCH, Math.round(rw * 0.58))
+      const sw = rw - jw - GAP
+      if (sw >= MIN_TOUCH) {
+        // Side by side: both are one thumb-roll apart, JUMP outermost and
+        // taller because it is pressed the most and mis-hitting it is fatal.
+        const jh = clamp(Math.round(usableH * 0.42), MIN_TOUCH, Math.min(200, avail))
+        const sh = Math.max(MIN_TOUCH, Math.round(jh * 0.74))
         rects.jump = rect(rx + rw - jw, bottom - jh, jw, jh)
         rects.shoot = rect(rx, bottom - sh, sw, sh)
       } else {
-        // Column too narrow to sit them side by side: stack SHOOT directly
-        // above JUMP, still one thumb-roll apart.
-        const sh = Math.max(MIN_TOUCH, Math.round(jh * 0.6))
+        // The column cannot hold two legal targets across, so stack SHOOT on
+        // top of JUMP instead of shaving either below 44 px.
+        let jh = clamp(Math.round(usableH * 0.42), MIN_TOUCH, 200)
+        let sh = Math.max(MIN_TOUCH, Math.round(jh * 0.6))
+        if (jh + GAP + sh > avail) {
+          const room = Math.max(2 * MIN_TOUCH + GAP, avail)
+          jh = Math.max(MIN_TOUCH, Math.round((room - GAP) * 0.62))
+          sh = Math.max(MIN_TOUCH, room - GAP - jh)
+        }
         rects.jump = rect(rx, bottom - jh, rw, jh)
         rects.shoot = rect(rx, bottom - jh - GAP - sh, rw, sh)
       }
 
-      // --- RESTART: top of the right column, a full screen-height away from
-      // where the thumbs live. Hitting it by accident ends a run.
+      // --- RESTART: top of the right column, a full screen height away from
+      // where the thumbs live. Hitting this by accident ends a run.
       const rrw = clamp(Math.min(rw, 72), MIN_TOUCH, 96)
       rects.restart = rect(rx + rw - rrw, inset.top + PAD, rrw, MIN_TOUCH + 4)
       return { rects, reserve: 0 }
@@ -490,8 +515,8 @@ export function attachTouch(acc: InputAccumulator, host: HTMLElement): TouchCont
     const x1 = view.viewW - inset.right - PAD
     const W = Math.max(3 * MIN_TOUCH, x1 - x0)
 
-    // Three columns: directions | restart | fire. The middle one exists so the
-    // restart button is never adjacent to a button pressed mid-run.
+    // Three columns: directions | restart | fire. The middle one exists only
+    // so RESTART is never adjacent to a button pressed mid-run.
     const dTotal = Math.min(Math.round(W * 0.4), 260)
     const cw = Math.min(Math.round(W * 0.16), 84)
     const rw = W - dTotal - cw
