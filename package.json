@@ -6,7 +6,7 @@
   "description": "I WANNA BE THE FOX - a brutally hard browser platformer. Inspired by the IWBTG fangame genre.",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && cp dist/index.html dist/404.html",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- viewport-fit=cover so env(safe-area-inset-*) is available on notched phones.
+         user-scalable=no is included for Android; iOS Safari ignores it, which is why
+         the touch layer also kills gestures in JS. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, maximum-scale=1"
+    />
+    <meta name="theme-color" content="#0d0d14" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="I WANNA BE THE FOX - a brutally hard browser platformer with a level editor. Inspired by the IWBTG fangame genre." />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <title>I WANNA BE THE FOX</title>
+    <style>
+      /* Inline so the first paint happens before the app bundle parses. On a
+         cold phone connection that is the difference between a black screen
+         and something that looks alive. */
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #07070c;
+        color: #e8e2d4;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        overflow: hidden;
+        overscroll-behavior: none;
+        /* 100vh on iOS means the height with the URL bar HIDDEN, so a vh layout
+           is taller than the visible area and the bottom of the control deck
+           ends up under the browser chrome. svh is stable and pessimistic. */
+        height: 100vh;
+        height: 100svh;
+        width: 100%;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #root {
+        position: fixed;
+        inset: 0;
+        height: 100vh;
+        height: 100svh;
+        touch-action: none;
+      }
+      #game {
+        display: block;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+      #splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        background: #07070c;
+        z-index: 50;
+        text-align: center;
+        padding: 24px;
+      }
+      #splash h1 {
+        margin: 0;
+        font-size: clamp(20px, 5.5vw, 44px);
+        letter-spacing: 0.14em;
+        color: #ffcf4a;
+        font-weight: 800;
+      }
+      #splash p { margin: 0; opacity: 0.65; font-size: 14px; max-width: 30em; line-height: 1.5; }
+      #splash .fox {
+        width: 64px; height: 64px;
+        background: #e2721f;
+        clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+        animation: pulse 1.4s ease-in-out infinite;
+      }
+      @keyframes pulse { 0%,100% { transform: scale(1); opacity: .85 } 50% { transform: scale(1.08); opacity: 1 } }
+      #splash.hidden { display: none; }
+      #editor-root { position: fixed; inset: 0; z-index: 20; display: none; }
+      #editor-root.active { display: block; }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <canvas id="game"></canvas>
+    </div>
+    <div id="editor-root"></div>
+    <div id="splash">
+      <div class="fox"></div>
+      <h1>I WANNA BE THE FOX</h1>
+      <p id="splash-hint">Loading…</p>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

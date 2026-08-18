@@ -38,8 +38,6 @@ export function step(w: World, input: InputFrame): void {
 
   if (w.won) return
 
-  const solids = collectSolids(w)
-
   // Entities move before the player so that a platform's displacement is
   // already applied when the player resolves against it in the same tick.
   for (const e of w.entities) {
@@ -51,9 +49,11 @@ export function step(w: World, input: InputFrame): void {
   }
   if (w.player.dead) return
 
-  const solidsAfter = collectSolids(w)
+  // Solids are collected AFTER the entity pass so a moving platform's new
+  // position is what the player resolves against in the same tick.
+  const solids = collectSolids(w)
   shoot(w, input)
-  stepPlayer(w, input, solidsAfter)
+  stepPlayer(w, input, solids)
   if (w.player.dead) return
 
   stepBullets(w)

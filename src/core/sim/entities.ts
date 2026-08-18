@@ -287,7 +287,7 @@ export const BEHAVIOURS: Record<string, Behaviour> = {
     }
   },
 
-  crusher(w, e, def) {
+  crusher(_w, e, def) {
     const dist = prop(def, e.p, 'dist')
     const sp = prop(def, e.p, 'speed')
     const wait = prop(def, e.p, 'wait')
