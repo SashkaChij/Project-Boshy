@@ -167,8 +167,11 @@ export const ENTITY_DEFS: Readonly<Record<string, EntityDef>> = Object.freeze({
   // ---------------------------------------------------------------- help ---
   refresher: { w: 24, h: 24, snap: 8, category: 'help', fields: NO_FIELDS },
   spring: {
+    // Capped at the terminal-velocity clamp: vspeed is clamped to +/-9 every
+    // tick, so a spring set to 24 launches you exactly as high as one set to 9.
+    // Offering the bigger number would just be a lie in the property panel.
     w: 32, h: 16, snap: 8, category: 'help', dirs: [0, 1, 2, 3],
-    fields: [{ key: 'power', type: 'float', def: 12, min: 4, max: 24, step: 0.5 }],
+    fields: [{ key: 'power', type: 'float', def: 9, min: 4, max: 9, step: 0.5 }],
   },
   gravflip: { w: 32, h: 32, snap: 16, category: 'help', fields: NO_FIELDS },
 

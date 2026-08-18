@@ -2,9 +2,10 @@ import {
   BULLET_HALF, FALLBLOCK_SPEED, HITBOX_B, HITBOX_T, MAX_PROJECTILES, REFRESHER_RESPAWN,
   RISEBLOCK_SPEED, SAVE_COOLDOWN, TILE, VIEW_H, VIEW_W,
 } from '../constants.js'
-import { boxBlocked, playerBox, type SolidRect } from '../collide.js'
+import { boxBlocked, playerBox, tileAt, type SolidRect } from '../collide.js'
 import { SIN_STEPS, isqrt, lutCos, lutSin, sign } from '../math.js'
 import { ENTITY_DEFS, prop, type EntityDef } from '../registry/entityDefs.js'
+import { material } from '../registry/tileMaterials.js'
 import type { Entity, Projectile, World } from '../types.js'
 import { killPlayer } from './player.js'
 
@@ -68,6 +69,24 @@ function moveCherry(w: World, e: Entity, def: EntityDef, bounce: boolean): void 
     e.y = ny
     if (offRoom(e)) e.alive = false
   }
+}
+
+function blockedBelow(w: World, l: number, r: number, bottom: number): boolean {
+  const ty = Math.floor(bottom / TILE)
+  if (ty >= VIEW_H / TILE) return true
+  for (let tx = Math.floor(l / TILE); tx <= Math.floor((r - 1) / TILE); tx++) {
+    if (material(tileAt(w.main, tx, ty)).solid) return true
+  }
+  return false
+}
+
+function blockedAbove(w: World, l: number, r: number, top: number): boolean {
+  const ty = Math.floor(top / TILE)
+  if (ty < 0) return true
+  for (let tx = Math.floor(l / TILE); tx <= Math.floor((r - 1) / TILE); tx++) {
+    if (material(tileAt(w.main, tx, ty)).solid) return true
+  }
+  return false
 }
 
 function solidPoint(w: World, px: number, py: number): boolean {
@@ -227,8 +246,21 @@ export const BEHAVIOURS: Record<string, Behaviour> = {
         e.vy = FALLBLOCK_SPEED
       }
     } else {
-      e.y += e.vy
-      if (offRoom(e)) e.alive = false
+      // Stop on whatever it lands on. A block that sails through the floor and
+      // out of the room is the single most confusing thing in the game: the
+      // trap fires, nothing is left behind, and the room looks unchanged.
+      const hw = def.w / 2
+      const hh = def.h / 2
+      const nextY = e.y + e.vy
+      if (blockedBelow(w, e.x - hw, e.x + hw, nextY + hh)) {
+        e.y = Math.floor((e.y + hh) / TILE) * TILE + TILE - hh
+        e.vy = 0
+        e.state = 3
+        w.events.push({ k: 'land' })
+      } else {
+        e.y = nextY
+        if (offRoom(e)) e.alive = false
+      }
     }
   },
 
@@ -248,8 +280,18 @@ export const BEHAVIOURS: Record<string, Behaviour> = {
         e.vy = RISEBLOCK_SPEED
       }
     } else {
-      e.y += e.vy
-      if (offRoom(e)) e.alive = false
+      const hw = def.w / 2
+      const hh = def.h / 2
+      const nextY = e.y + e.vy
+      if (blockedAbove(w, e.x - hw, e.x + hw, nextY - hh)) {
+        e.y = Math.ceil((e.y - hh) / TILE) * TILE + hh
+        e.vy = 0
+        e.state = 3
+        w.events.push({ k: 'land' })
+      } else {
+        e.y = nextY
+        if (offRoom(e)) e.alive = false
+      }
     }
   },
 
@@ -385,7 +427,7 @@ export const BEHAVIOURS: Record<string, Behaviour> = {
       rec.push({ x: w.player.x, y: w.player.y })
       if (rec.length > 90) rec.shift()
       const t = rec[0]
-      if (t) { e.x = t.x; e.y = t.y - 40 }
+      if (t) { e.x = t.x; e.y = t.y - 18 }
       if (e.timer % Math.max(20, 45 - rage * 10) === 0) {
         spawnProjectile(w, e.x, e.y, 0, 4, 2)
       }

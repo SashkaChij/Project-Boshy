@@ -70,6 +70,10 @@ export function step(w: World, input: InputFrame): void {
 }
 
 function stepBullets(w: World): void {
+  // Solid entities stop bullets too -- but NOT the shootable ones, which are
+  // resolved a moment later in bulletPass. Without this a shot sailed straight
+  // through a falling block or a crusher as if it were scenery.
+  const opaque = collectSolids(w).filter((_, i) => !solidIsShootable(w, i))
   for (const b of w.bullets) {
     if (!b.alive) continue
     b.x += b.vx
@@ -79,8 +83,21 @@ function stepBullets(w: World): void {
       continue
     }
     const box = { l: b.x - 4, r: b.x + 4, t: b.y - 4, b: b.y + 4 }
-    if (boxBlocked(w.main, box, [], false, 0)) b.alive = false
+    if (boxBlocked(w.main, box, opaque, false, 0)) b.alive = false
   }
+}
+
+/** collectSolids preserves entity order, so the index maps straight back. */
+function solidIsShootable(w: World, index: number): boolean {
+  let seen = 0
+  for (const e of w.entities) {
+    if (!e.alive) continue
+    const def = ENTITY_DEFS[e.t]
+    if (!def || (!def.solid && !def.oneway)) continue
+    if (seen === index) return !!def.shootable
+    seen++
+  }
+  return false
 }
 
 function stepProjectiles(w: World): void {
@@ -91,6 +108,13 @@ function stepProjectiles(w: World): void {
     p.y += p.vy
     p.life--
     if (p.life <= 0 || p.x < -48 || p.x > VIEW_W + 48 || p.y < -48 || p.y > VIEW_H + 48) {
+      p.alive = false
+      continue
+    }
+    // Enemy fire is stopped by terrain, exactly like the player's. Previously it
+    // was not, which made every pillar and ledge in the game cover that worked
+    // only AGAINST you: it blocked your shots and let theirs through.
+    if (boxBlocked(w.main, { l: p.x - 3, r: p.x + 3, t: p.y - 3, b: p.y + 3 }, [], false, 0)) {
       p.alive = false
       continue
     }
@@ -137,16 +161,19 @@ function handleRoomEdges(w: World): void {
   if (box.r < 0 && left >= 0) {
     loadRoom(w, left)
     p.x += VIEW_W
+    unstick(w)
     return
   }
   if (box.l > VIEW_W && right >= 0) {
     loadRoom(w, right)
     p.x -= VIEW_W
+    unstick(w)
     return
   }
   if (box.t < 0 && up >= 0) {
     loadRoom(w, up)
     p.y += VIEW_H
+    unstick(w)
     return
   }
   if (box.t > VIEW_H) {
@@ -155,6 +182,7 @@ function handleRoomEdges(w: World): void {
     if (down >= 0) {
       loadRoom(w, down)
       p.y -= VIEW_H
+      unstick(w)
       return
     }
     killPlayer(w)
@@ -175,6 +203,39 @@ function handleRoomEdges(w: World): void {
     p.y += -box.t
     if (p.vspeed < 0) p.vspeed = 0
   }
+}
+
+/**
+ * Push the player out of geometry after a room change.
+ *
+ * The player crosses an edge at whatever height they happened to be at, and the
+ * neighbouring room has its own walls there. Landing inside one leaves them
+ * wedged with no way out, which reads as the game breaking rather than as a
+ * hard game. The search spirals outwards so the nudge is always the shortest
+ * one, and prefers moving further into the room over back out of it.
+ */
+function unstick(w: World): void {
+  const p = w.player
+  const solids = collectSolids(w)
+  const free = (x: number, y: number): boolean =>
+    !boxBlocked(w.main, playerBox(x, y, p.gravDir), solids, false, 0)
+
+  if (free(p.x, p.y)) return
+
+  const ox = p.x
+  const oy = p.y
+  for (let r = 1; r <= 96; r++) {
+    // Horizontal first: the player is usually embedded in an edge wall.
+    if (free(ox + r, oy)) { p.x = ox + r; return }
+    if (free(ox - r, oy)) { p.x = ox - r; return }
+    if (free(ox, oy - r)) { p.y = oy - r; return }
+    if (free(ox, oy + r)) { p.y = oy + r; return }
+    if (free(ox + r, oy - r)) { p.x = ox + r; p.y = oy - r; return }
+    if (free(ox - r, oy - r)) { p.x = ox - r; p.y = oy - r; return }
+  }
+  // Nothing within reach is free: the room is solid where they arrived. Dying
+  // is still better than standing frozen inside a wall forever.
+  killPlayer(w)
 }
 
 /** Pixel bounds of the current room. Handy for the renderer and the editor. */

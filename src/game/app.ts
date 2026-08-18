@@ -1,4 +1,5 @@
-import { TICK_MS, VIEW_H, VIEW_W } from '../core/constants.js'
+import { TICK_MS, TILE, VIEW_H, VIEW_W } from '../core/constants.js'
+import { material } from '../core/registry/tileMaterials.js'
 import { validateLevel } from '../core/level.js'
 import { ReplayRecorder, verifyReplay } from '../core/replay.js'
 import { createWorld, respawn } from '../core/sim/world.js'
@@ -19,6 +20,23 @@ import { getSettings, listLevels, loadSettings, putLevel, recordClear, saveSetti
 import { drawText, measureText, textHeight } from '../platform/text.js'
 import { drawHud } from './hud.js'
 import { DEFAULT_THEME, Menu, drawBar, type MenuItem } from './ui.js'
+
+/** Rows that are solid edge to edge can be hidden without hiding anything. */
+function computeSafeCrop(w: World): { top: number; bottom: number } {
+  const cols = VIEW_W / TILE
+  const rowSolid = (ty: number): boolean => {
+    for (let tx = 0; tx < cols; tx++) {
+      if (!material(w.main[ty * cols + tx] ?? 0).solid) return false
+    }
+    return true
+  }
+  const rows = VIEW_H / TILE
+  let top = 0
+  while (top < 2 && rowSolid(top)) top++
+  let bottom = 0
+  while (bottom < 2 && rowSolid(rows - 1 - bottom)) bottom++
+  return { top: top * TILE, bottom: bottom * TILE }
+}
 
 export type SceneId = 'title' | 'difficulty' | 'worldmap' | 'play' | 'pause' | 'win' | 'options' | 'gallery'
 
@@ -54,6 +72,8 @@ export class App {
   private galleryLevels: { id: string; title: string; data: LevelData }[] = []
   private onOpenEditor: ((level?: LevelData) => void) | null = null
   private sawTouch = false
+  private cropKey = ''
+  private cropCache = { top: 0, bottom: 0 }
 
   constructor(canvas: HTMLCanvasElement, host: HTMLElement) {
     loadSettings()
@@ -552,8 +572,32 @@ export class App {
       ctx.fillRect(0, 0, VIEW_W, VIEW_H)
       return
     }
+    this.applyCrop(w)
     this.renderer.drawWorld(w, this.particles, (i) => t(`taunt.${i}`))
-    drawHud(ctx, w)
+    drawHud(ctx, w, this.display.crop)
+  }
+
+  /**
+   * Crop rows that are solid all the way across, and only on screens short
+   * enough to need it. A room's top row is wall in every authored room, and the
+   * floor slab underneath is never anything else -- so hiding them costs the
+   * player nothing and buys about a fifth of the playfield area back on a
+   * phone. It is recomputed per room because a player-made level may well put
+   * something in row 0.
+   */
+  private applyCrop(w: World): void {
+    const m = this.display.metrics()
+    const wantCrop = m.viewH < 520
+    if (!wantCrop) {
+      this.display.setCrop({ top: 0, bottom: 0 })
+      return
+    }
+    const key = `${w.room}:${w.level.id}`
+    if (key !== this.cropKey) {
+      this.cropKey = key
+      this.cropCache = computeSafeCrop(w)
+    }
+    this.display.setCrop(this.cropCache)
   }
 
   private renderBackdrop(): void {

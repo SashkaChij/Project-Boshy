@@ -147,7 +147,7 @@ for (const device of [
   await shot(page, `${device.name}-play`)
 
   if (device.touch) {
-    const deck = await page.evaluate(() => document.querySelectorAll('[data-fox]').length)
+    const deck = await page.evaluate(() => document.querySelectorAll('.fox-btn').length)
     const visible = await page.evaluate(() => {
       const root = document.querySelector('.fox-touch')
       return !!root && !root.hidden

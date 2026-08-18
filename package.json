@@ -14,7 +14,8 @@
     "lint": "eslint .",
     "smoke": "node tools/smoke.mjs",
     "spritesheet": "node tools/spritesheet.mjs",
-    "levelsheet": "node tools/levelsheet.mjs"
+    "levelsheet": "node tools/levelsheet.mjs",
+    "deckcheck": "node tools/deckcheck.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
