@@ -14,7 +14,7 @@ import { InputAccumulator } from '../platform/input/state.js'
 import { attachTouch, type TouchController } from '../platform/input/touch.js'
 import { ParticleField } from '../platform/particles.js'
 import { createRenderer, type Renderer } from '../platform/renderer2d.js'
-import { getSettings, listLevels, loadSettings, recordClear, saveSettings } from '../platform/storage.js'
+import { getSettings, listLevels, loadSettings, putLevel, recordClear, saveSettings } from '../platform/storage.js'
 import { drawText, measureText, textHeight } from '../platform/text.js'
 import { drawHud } from './hud.js'
 import { DEFAULT_THEME, Menu, drawBar, type MenuItem } from './ui.js'
@@ -168,7 +168,33 @@ export class App {
     playSfx('win')
     this.playTrack('victory')
     if (s.worldId) recordClear(s.worldId, w.tick, w.deaths, w.assist)
+    else void this.storeVerifiedClear(w, s)
     this.setScene('win')
+  }
+
+  /**
+   * A cleared custom level gets its clear recorded and re-verified.
+   *
+   * The replay is replayed headlessly against the same level before the badge
+   * is granted, so "verified" means the run reproduces, not that the player
+   * claims it happened. Strict and assist clears are stored separately because
+   * they are not the same achievement.
+   */
+  private async storeVerifiedClear(w: World, s: PlaySession): Promise<void> {
+    try {
+      const replay = s.recorder.finish(s.level, w.difficulty, w.assist, 0x1337c0de)
+      const { verifyReplay } = await import('../core/replay.js')
+      const result = verifyReplay(s.level, replay)
+      if (!result.ok) return
+
+      if (w.assist) s.level.meta.verifiedAssist = true
+      else s.level.meta.verifiedStrict = true
+      s.level.meta.clearMs = Math.round((w.tick * 1000) / 50)
+      await putLevel(s.level, replay)
+      this.showToast(t(w.assist ? 'win.assistNote' : 'gallery.verified'))
+    } catch {
+      // A failed verification is not worth interrupting a win screen over.
+    }
   }
 
   // ----------------------------------------------------------------- scenes --
@@ -341,7 +367,11 @@ export class App {
     const items: MenuItem[] = this.galleryLevels.map((lv) => ({
       label: () => lv.title || t('editor.untitled'),
       action: () => this.playCustomLevel(lv.data, 'gallery'),
-      hint: () => t('gallery.play'),
+      value: () => (lv.data.meta.verifiedStrict ? '✓' : ''),
+      hint: () =>
+        lv.data.meta.verifiedStrict
+          ? `${t('gallery.verified')} — ${formatTicks(Math.round((lv.data.meta.clearMs * 50) / 1000))}`
+          : t('gallery.unverified'),
     }))
     // Codes arrive by chat as often as by link, and a player who is handed one
     // otherwise has nowhere to put it outside the editor.

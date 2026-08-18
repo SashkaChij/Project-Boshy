@@ -92,6 +92,28 @@ npm run build    # статическая сборка в dist/
 **Экспорт в файл — это настоящий бэкап, а не опция.** На iOS браузер удаляет данные сайта после
 7 дней без визитов.
 
+## Что проверяется автоматически, а что нет
+
+```bash
+npm test          # 130 тестов
+npm run typecheck
+npm run lint
+npm run build
+npm run smoke        # прогон собранного сайта в реальном Chromium (нужен запущенный preview)
+npm run spritesheet  # контактный лист всех 54 спрайтов
+npm run levelsheet   # все комнаты всех миров одной картинкой
+```
+
+Тесты закрывают: таблицу физики (апексы 86.1 / 143.9 / 22.9 px), коллизии и попиксельные шипы,
+смерть и респавн, формат уровня с миграциями, коды уровней, реплеи, стек undo редактора,
+чистоту ядра (ни `Date`, ни `Math.random`, ни тригонометрии), покрытие глифов обеими локалями,
+три русские формы множественного числа, и структуру миров.
+
+**Честно о границах:** автоматика проверяет, что комната не запечатана глухой стеной, что спавн
+не в шипе и что все объекты внутри комнаты. Она **не** доказывает, что уровень проходим — для
+этого нужен человек либо записанный реплей автора. Именно поэтому «Проверен» ставится только
+после того, как движок headless воспроизвёл ваше прохождение и получил тот же результат.
+
 ## Архитектура
 
 ```
@@ -154,6 +176,16 @@ Pushing to the branch deploys to GitHub Pages. Enable it once under
 
 Arrows or WASD to move, Shift/Space/Z to jump (press again in the air for the double jump, release
 early to cut it short), X to shoot, R to restart from your last save, Q to give up, Esc to pause.
+
+### Verification
+
+`npm test` runs 130 tests; `npm run smoke` drives the built site in a real browser at desktop and
+phone sizes; `npm run levelsheet` renders every room of every world onto one image so the level
+design can actually be looked at.
+
+What the tests do NOT do is prove a level is clearable. That needs a human, or the author's own
+replay - which is why the "verified" badge is granted only after the engine has re-run the
+recorded input headlessly and reproduced the clear.
 
 ### Licence
 

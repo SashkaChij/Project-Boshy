@@ -1,3 +1,4 @@
+import type { Replay } from '../core/replay.js'
 import type { LevelData } from '../core/types.js'
 
 /**
@@ -100,6 +101,8 @@ export interface StoredLevel {
   title: string
   updatedAt: number
   data: LevelData
+  /** The author's own clear, kept so the level ships proof it is completable. */
+  replay?: Replay
 }
 
 let dbPromise: Promise<IDBDatabase> | null = null
@@ -149,8 +152,17 @@ export async function getLevel(id: string): Promise<StoredLevel | undefined> {
   }
 }
 
-export async function putLevel(data: LevelData): Promise<void> {
-  const rec: StoredLevel = { id: data.id, title: data.meta.title, updatedAt: Date.now(), data }
+export async function putLevel(data: LevelData, replay?: Replay): Promise<void> {
+  // Keep any existing replay unless a new one is supplied, so saving an
+  // unrelated edit does not silently discard the author's verified clear.
+  const existing = replay ? undefined : await getLevel(data.id)
+  const rec: StoredLevel = {
+    id: data.id,
+    title: data.meta.title,
+    updatedAt: Date.now(),
+    data,
+    ...(replay ?? existing?.replay ? { replay: replay ?? existing?.replay } : {}),
+  }
   await tx('readwrite', (s) => s.put(rec) as IDBRequest<IDBValidKey>)
 }
 

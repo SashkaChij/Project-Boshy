@@ -389,7 +389,7 @@ export const world: LevelData = buildLevel({
         at('refresher', 15, 3),
         at('gravflip', 18, 1),
         saveAt(19, 15),
-        at('fan', 22, 3, 0, { rate: 100, count: 6, speed: 3, spin: 6 }),
+        at('fan', 22, 3, 0, { rate: 100, count: 6, speed: 3, spin: 8 }),
         at('sign', 23, 15, 0, { text: 8 }),
       ],
     },

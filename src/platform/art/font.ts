@@ -198,6 +198,10 @@ export const GLYPHS: Readonly<Record<string, number[]>> = Object.freeze({
   '→': [0b000000, 0b000000, 0b001000, 0b000100, 0b111110, 0b000100, 0b001000, 0b000000],
   '↑': [0b000000, 0b001000, 0b011100, 0b101010, 0b001000, 0b001000, 0b001000, 0b000000],
   '↓': [0b000000, 0b001000, 0b001000, 0b001000, 0b101010, 0b011100, 0b001000, 0b000000],
+
+  // -- status marks drawn from code rather than from a locale string --------
+  '✓': [0b000000, 0b000000, 0b000001, 0b000010, 0b100010, 0b010100, 0b001000, 0b000000],
+  '✗': [0b000000, 0b100001, 0b010010, 0b001100, 0b001100, 0b010010, 0b100001, 0b000000],
 })
 
 /** Drawn for any character with no glyph: an empty box, visible on purpose. */

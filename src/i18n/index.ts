@@ -78,7 +78,7 @@ export function onLocaleChange(fn: () => void): () => void {
 export function t(key: string, params?: Record<string, string | number>): string {
   const dict = DICTS[current]
   let s = dict[key] ?? EN[key]
-  if (s === undefined) return `⟪${key}⟫`
+  if (s === undefined) return `[${key}]`
   if (params) {
     for (const [k, v] of Object.entries(params)) {
       s = s.split(`{${k}}`).join(typeof v === 'number' ? numberFormat.format(v) : String(v))
@@ -101,7 +101,7 @@ export function tp(baseKey: string, n: number, params?: Record<string, string | 
   const dict = DICTS[current]
   const key = `${baseKey}.${cat}`
   const s = dict[key] ?? dict[`${baseKey}.other`] ?? EN[key] ?? EN[`${baseKey}.other`]
-  if (s === undefined) return `⟪${baseKey}⟫`
+  if (s === undefined) return `[${baseKey}]`
   let out = s
   const all = { n, ...params }
   for (const [k, v] of Object.entries(all)) {

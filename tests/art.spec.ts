@@ -85,6 +85,14 @@ describe('bitmap font', () => {
     expect([...ru].filter((c) => !GLYPHS[c])).toEqual([])
   })
 
+  it('has a glyph for every symbol the UI draws from code', () => {
+    // Locale strings are covered by the dictionary sweep above, but symbols
+    // written directly into a draw call (a verified tick, an arrow) have no
+    // dictionary entry to sweep, and would silently render as empty boxes.
+    const drawn = ['✓', '✗', '←', '→', '↑', '↓', '·', '№', '«', '»', '—', '[', ']', '%', '/']
+    expect(drawn.filter((c) => !GLYPHS[c])).toEqual([])
+  })
+
   it('covers printable ASCII', () => {
     const missing: string[] = []
     for (let i = 0x21; i <= 0x7e; i++) {

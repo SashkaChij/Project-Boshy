@@ -75,7 +75,7 @@ describe('t()', () => {
   it('interpolates and marks missing keys visibly', () => {
     setLocale('en', false)
     expect(t('editor.roomCount', { n: 3, max: 64 })).toBe('3 / 64 rooms')
-    expect(t('does.not.exist')).toBe('⟪does.not.exist⟫')
+    expect(t('does.not.exist')).toBe('[does.not.exist]')
   })
 })
 
