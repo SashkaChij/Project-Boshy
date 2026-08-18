@@ -3,10 +3,7 @@ import { validateLevel } from '../core/level.js'
 import { ReplayRecorder } from '../core/replay.js'
 import { createWorld, respawn } from '../core/sim/world.js'
 import { step } from '../core/sim/step.js'
-import {
-  DIFF_IMPOSSIBLE, DIFF_MEDIUM, IN_JUMP, IN_LEFT, IN_RIGHT, IN_SHOOT,
-  type LevelData, type World,
-} from '../core/types.js'
+import { DIFF_IMPOSSIBLE, DIFF_MEDIUM, type LevelData, type World } from '../core/types.js'
 import { WORLDS, type CampaignWorld } from '../content/index.js'
 import { formatTicks, getLocale, setLocale, t, tp } from '../i18n/index.js'
 import { buildAtlas, type Atlas } from '../platform/atlas.js'
@@ -55,6 +52,7 @@ export class App {
   private currentTrack: TrackName | null = null
   private galleryLevels: { id: string; title: string; data: LevelData }[] = []
   private onOpenEditor: ((level?: LevelData) => void) | null = null
+  private sawTouch = false
 
   constructor(canvas: HTMLCanvasElement, host: HTMLElement) {
     loadSettings()
@@ -180,6 +178,11 @@ export class App {
     const menu = this.menus.get(id)
     if (menu) menu.index = 0
     if (id === 'gallery') void this.refreshGallery()
+    this.syncDeck()
+    // Menu confirm shares keys with jump (Space / Shift / Z). Without this the
+    // keystroke that started or resumed a level would also be consumed as a
+    // jump on the very first tick.
+    if (id === 'play') this.input.clear()
 
     if (id === 'play') {
       const world = this.session?.worldId
@@ -369,10 +372,7 @@ export class App {
   }
 
   private applyTouchMode(): void {
-    const mode = getSettings().touchMode
-    if (mode === 'on') this.touch?.setVisible(true)
-    else if (mode === 'off') this.touch?.setVisible(false)
-    // 'auto' is the controller's own detection; leave it alone.
+    this.syncDeck()
   }
 
   // ------------------------------------------------------------------ input --
@@ -384,6 +384,9 @@ export class App {
 
     canvas.addEventListener('pointerdown', (e) => {
       void initAudio()
+      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+        if (!this.sawTouch) { this.sawTouch = true; this.syncDeck() }
+      }
       if (this.scene === 'play') return
       const menu = this.menus.get(this.scene)
       if (!menu) return
@@ -438,6 +441,12 @@ export class App {
         playSfx('select')
         menu.activate()
         return true
+      case 'KeyL':
+        // Reachable from every menu, not buried in options: a Russian player
+        // landing on an English title screen should not have to navigate it.
+        setLocale(getLocale() === 'ru' ? 'en' : 'ru')
+        playSfx('select')
+        return true
       case 'Escape':
         if (this.scene === 'pause') this.setScene('play')
         else if (this.scene !== 'title') this.setScene('title')
@@ -447,18 +456,23 @@ export class App {
     }
   }
 
-  /** The touch deck doubles as menu navigation when no game is running. */
-  private pollTouchMenu(): void {
-    if (this.scene === 'play') return
-    const menu = this.menus.get(this.scene)
-    if (!menu) return
-    if (this.input.isHeld(IN_JUMP)) {
-      // Consumed as a tap on the highlighted item via pointerdown instead;
-      // holding jump must not spam activations.
-    }
-    void IN_LEFT
-    void IN_RIGHT
-    void IN_SHOOT
+  /**
+   * The deck is shown only during play.
+   *
+   * Menus are tapped directly -- the hit test on the canvas already handles
+   * that -- so leaving five buttons floating over the title screen would just
+   * cover it for no gain.
+   */
+  private wantDeck(): boolean {
+    if (this.scene !== 'play') return false
+    const mode = getSettings().touchMode
+    if (mode === 'off') return false
+    if (mode === 'on') return true
+    return this.sawTouch || (window.matchMedia?.('(pointer: coarse)').matches ?? false)
+  }
+
+  private syncDeck(): void {
+    this.touch?.setVisible(this.wantDeck())
   }
 
   showToast(msg: string): void {
@@ -471,7 +485,6 @@ export class App {
   private render(): void {
     const ctx = this.display.ctx
     ctx.imageSmoothingEnabled = false
-    this.pollTouchMenu()
 
     switch (this.scene) {
       case 'play': this.renderPlay(); break
