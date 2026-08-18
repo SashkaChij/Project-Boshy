@@ -131,10 +131,15 @@ export const ENTITY_DEFS: Readonly<Record<string, EntityDef>> = Object.freeze({
   },
   fakeblock: {
     // Looks exactly like a solid block. Is not one. The genre in one entity.
-    w: 32, h: 32, snap: 32, category: 'block', fields: NO_FIELDS,
+    // `look` picks WHICH solid it imitates: the trap only works if it is
+    // indistinguishable from the blocks around it, so a void level needs an
+    // obsidian fake and a factory needs a metal one.
+    w: 32, h: 32, snap: 32, category: 'block',
+    fields: [{ key: 'look', type: 'int', def: 1, min: 1, max: 6 }],
   },
   invisblock: {
-    w: 32, h: 32, snap: 32, category: 'block', solid: true, fields: NO_FIELDS,
+    w: 32, h: 32, snap: 32, category: 'block', solid: true,
+    fields: [{ key: 'look', type: 'int', def: 1, min: 1, max: 6 }],
   },
   breakblock: {
     w: 32, h: 32, snap: 32, category: 'block', solid: true, shootable: true, hp: 1,

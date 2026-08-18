@@ -109,13 +109,10 @@ describe('authored content', () => {
           while (stack.length) {
             const [cx, cy] = stack.pop() as [number, number]
             if (cx === ROOM_W - 1) { reachedRight = true; break }
-            for (const [nx, ny] of [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]]) {
-              if (nx < 0 || ny < 0 || nx >= ROOM_W || ny >= ROOM_H) continue
-              const i = ny * ROOM_W + nx
-              if (seen[i] || !open(nx, ny)) continue
-              seen[i] = 1
-              stack.push([nx, ny])
-            }
+            const neighbours: [number, number][] = [
+              [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1],
+            ]
+            for (const [nx, ny] of neighbours) seed(nx, ny)
           }
           if (!reachedRight) sealed.push(index)
         })

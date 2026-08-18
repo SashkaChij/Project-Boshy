@@ -185,6 +185,7 @@ export const RU: Record<string, string> = {
   'prop.power': 'Сила',
   'prop.room': 'Целевая комната',
   'prop.text': 'Текст',
+  'prop.look': 'Маскировка',
   'prop.pattern': 'Паттерн',
   'prop.hp': 'Здоровье',
   'prop.direction': 'Направление',

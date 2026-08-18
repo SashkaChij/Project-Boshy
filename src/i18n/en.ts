@@ -182,6 +182,7 @@ export const EN: Record<string, string> = {
   'prop.power': 'Power',
   'prop.room': 'Target room',
   'prop.text': 'Text',
+  'prop.look': 'Disguise',
   'prop.pattern': 'Pattern',
   'prop.hp': 'Health',
   'prop.direction': 'Direction',

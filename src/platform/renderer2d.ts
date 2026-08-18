@@ -110,6 +110,17 @@ export function createRenderer(ctx: CanvasRenderingContext2D, atlas: Atlas): Ren
 
     if (e.t === 'invisblock' && e.state === 0) return
 
+    // Fake and revealed-invisible blocks are drawn through the TILE renderer,
+    // not as sprites, so they are pixel-identical to the real block they are
+    // imitating. Anything less and the trap gives itself away.
+    if (e.t === 'fakeblock' || e.t === 'invisblock') {
+      const look = Math.max(1, Math.min(6, prop(def, e.p, 'look')))
+      if (e.t === 'invisblock') ctx.globalAlpha = 0.75
+      atlas.drawTile(ctx, look, Math.round(e.x - 16), Math.round(e.y - 16))
+      ctx.globalAlpha = 1
+      return
+    }
+
     if (e.t === 'refresher' && e.state > 0) {
       // Spent: show a faint ghost so the player knows it will come back.
       ctx.globalAlpha = 0.25

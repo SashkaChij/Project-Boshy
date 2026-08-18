@@ -260,7 +260,7 @@ export function createEditor(opts: EditorOptions): EditorApi {
       cc.translate(16, 16)
       cc.scale(s, s)
       cc.translate(-16, -16)
-      drawEntitySprite(cc, id, 16, 16, 0)
+      drawEntitySprite(cc, id, 16, 16, 0, 1)
       cc.restore()
     }
     return c
@@ -406,7 +406,14 @@ export function createEditor(opts: EditorOptions): EditorApi {
     ctx.imageSmoothingEnabled = false
   }
 
-  function drawEntitySprite(c: CanvasRenderingContext2D, type: string, x: number, y: number, d: number): void {
+  function drawEntitySprite(
+    c: CanvasRenderingContext2D,
+    type: string,
+    x: number,
+    y: number,
+    d: number,
+    look = 1,
+  ): void {
     const SPRITE: Record<string, string> = {
       spawn: 'foxIdle0', save: 'save', goal: 'goal', warp: 'warp', sign: 'sign',
       cherry: 'cherry', cherrySine: 'cherry', cherryHome: 'cherry', cherryBounce: 'cherry',
@@ -415,6 +422,18 @@ export function createEditor(opts: EditorOptions): EditorApi {
       invisblock: 'invisblock', breakblock: 'breakblock', platform: 'platformEnt',
       crusher: 'crusher', refresher: 'refresher', spring: 'spring', gravflip: 'gravflip',
       boss: 'boss0',
+    }
+    if (type === 'fakeblock' || type === 'invisblock') {
+      // Same reasoning as the game renderer: draw the tile it imitates, so the
+      // editor shows the author exactly what the player will see.
+      atlas.drawTile(c, Math.max(1, Math.min(6, look)), Math.round(x - 16), Math.round(y - 16))
+      if (type === 'invisblock') {
+        c.strokeStyle = '#7fd7ff'
+        c.setLineDash([4, 3])
+        c.strokeRect(x - 16, y - 16, 32, 32)
+        c.setLineDash([])
+      }
+      return
     }
     const key = SPRITE[type]
     if (!key || !atlas.has(key)) {
@@ -475,7 +494,7 @@ export function createEditor(opts: EditorOptions): EditorApi {
   function drawEntities(): void {
     const room = state.room
     room.entities.forEach((e, i) => {
-      drawEntitySprite(ctx, e.t, e.x, e.y, e.d ?? 0)
+      drawEntitySprite(ctx, e.t, e.x, e.y, e.d ?? 0, prop(entityDef(e.t), e.p ?? {}, 'look'))
       if (i === state.selectedEntity) {
         const def = entityDef(e.t)
         ctx.strokeStyle = '#ffcf4a'
@@ -585,7 +604,10 @@ export function createEditor(opts: EditorOptions): EditorApi {
     if (hover.tx < 0) return
     if (state.tool === 'entity' && state.brushEntity) {
       ctx.globalAlpha = 0.55
-      drawEntitySprite(ctx, state.brushEntity, hover.px, hover.py, state.brushEntityDir)
+      drawEntitySprite(
+        ctx, state.brushEntity, hover.px, hover.py, state.brushEntityDir,
+        prop(entityDef(state.brushEntity), state.brushEntityProps, 'look'),
+      )
       ctx.globalAlpha = 1
       return
     }
