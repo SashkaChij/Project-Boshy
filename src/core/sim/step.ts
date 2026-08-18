@@ -126,24 +126,54 @@ function handleRoomEdges(w: World): void {
   const p = w.player
   const box = playerBox(p.x, p.y, p.gravDir)
 
-  if (box.r < 0) {
-    const n = roomAt(w.level, room.x - 1, room.y)
-    if (n >= 0) { loadRoom(w, n); p.x += VIEW_W }
-    else p.x = -(box.l - p.x)
-  } else if (box.l > VIEW_W) {
-    const n = roomAt(w.level, room.x + 1, room.y)
-    if (n >= 0) { loadRoom(w, n); p.x -= VIEW_W }
-    else p.x = VIEW_W - (box.r - p.x)
+  // Whether a neighbour exists has to be decided BEFORE clamping, otherwise
+  // the two rules fight: the player walks past the edge, gets clamped back,
+  // walks out again, and jitters at the boundary forever.
+  const left = roomAt(w.level, room.x - 1, room.y)
+  const right = roomAt(w.level, room.x + 1, room.y)
+  const up = roomAt(w.level, room.x, room.y - 1)
+  const down = roomAt(w.level, room.x, room.y + 1)
+
+  if (box.r < 0 && left >= 0) {
+    loadRoom(w, left)
+    p.x += VIEW_W
+    return
+  }
+  if (box.l > VIEW_W && right >= 0) {
+    loadRoom(w, right)
+    p.x -= VIEW_W
+    return
+  }
+  if (box.t < 0 && up >= 0) {
+    loadRoom(w, up)
+    p.y += VIEW_H
+    return
+  }
+  if (box.t > VIEW_H) {
+    // Falling out of the world kills. Every other edge without a neighbour is
+    // a wall, but a bottomless pit has to be lethal or the genre stops working.
+    if (down >= 0) {
+      loadRoom(w, down)
+      p.y -= VIEW_H
+      return
+    }
+    killPlayer(w)
+    return
   }
 
-  if (box.b < 0) {
-    const n = roomAt(w.level, room.x, room.y - 1)
-    if (n >= 0) { loadRoom(w, n); p.y += VIEW_H }
-    else p.y = -(box.t - p.y)
-  } else if (box.t > VIEW_H) {
-    const n = roomAt(w.level, room.x, room.y + 1)
-    if (n >= 0) { loadRoom(w, n); p.y -= VIEW_H }
-    else killPlayer(w)
+  // Edges with no room behind them are solid walls, and the clamp keeps the
+  // whole hitbox inside so the player never renders half off-screen.
+  if (left < 0 && box.l < 0) {
+    p.x += -box.l
+    if (p.hspeed < 0) p.hspeed = 0
+  }
+  if (right < 0 && box.r > VIEW_W - 1) {
+    p.x -= box.r - (VIEW_W - 1)
+    if (p.hspeed > 0) p.hspeed = 0
+  }
+  if (up < 0 && box.t < 0) {
+    p.y += -box.t
+    if (p.vspeed < 0) p.vspeed = 0
   }
 }
 

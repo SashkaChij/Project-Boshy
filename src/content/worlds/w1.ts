@@ -47,7 +47,7 @@ const R0 = [
   '............==...........',
   '........==..==...........',
   '###################..####',
-  '===================..####',
+  '===================..====',
   '###################..####',
 ]
 
@@ -81,11 +81,14 @@ const R1 = [
 
 // ---------------------------------------------------------------- room 2 ---
 // TEACHES: spikes, and the first real betrayal.
-// The floor spikes at columns 7..9 are the honest lesson. The pit at 19..21 is
-// the lie: it is only 3 tiles wide, so the reflex is a full-height jump -- and
-// a full jump puts the fox's head at y=405, straight into the spike teeth
-// hanging at y=416. The pit is crossed with a SHORT hop. The teeth are drawn in
-// plain sight, and the sign in front of them says there is nothing above you.
+// The floor spikes at columns 7..9 are the honest lesson: three tiles wide, an
+// ordinary jump, nothing hidden. Then the ground drops a tile at column 15 and
+// the pit at 19..20 is the lie. It is only 2 tiles wide, so it invites a
+// confident full-height jump -- and a full jump drives the fox's head straight
+// into the spike teeth hanging from the branch at row 13. Measured against the
+// engine: a release at ticks 2..12 clears it, anything longer dies, and falling
+// in and double-jumping out past the teeth also works. The teeth are drawn in
+// plain sight and the sign in front of them says there is nothing above you.
 const R2 = [
   '#########################',
   '.........................',
@@ -109,12 +112,13 @@ const R2 = [
 ]
 
 // ---------------------------------------------------------------- room 3 ---
-// TEACHES: fallblock. Four stepping pillars over a spike bed, each with a block
-// hanging four tiles above it. Landing on a pillar puts the fox under the block
-// and arms it; it then takes about 43 ticks to arrive. That is a generous
-// second of thinking time and no more, so the room becomes a rhythm: land,
-// leave, land, leave. Stand still and the ceiling takes the pillar away from
-// you.
+// TEACHES: fallblock. Three stepping pillars over a spike bed, each two tiles
+// wide so the landing is a landing and not a needle. A block hangs four tiles
+// above the LEFT tile of each pillar; landing there puts the fox underneath it
+// and arms it, and it takes about 43 ticks to arrive. Sidestepping to the right
+// tile buys a moment. The last pillar has a block over both of its tiles, on
+// staggered delays, so there is nowhere left to wait -- which is the lesson
+// stated as geometry: fallblocks do not punish being slow, they punish stopping.
 const R3 = [
   '#########################',
   '.........................',
@@ -140,9 +144,10 @@ const R3 = [
 // ---------------------------------------------------------------- room 4 ---
 // TEACHES: cherries. Four cherrySine hazards with speed 0 hover in place and
 // swing 96 px up and down forever, at four different frequencies, so they never
-// settle into one readable pattern. The safe pockets between them (columns 9,
-// 13, 17) are wide enough to stand in and wait, which is the lesson: this room
-// is about patience, not speed. Linear cherries rain from the canopy and one
+// settle into one readable pattern. The gaps between them -- column 9, the
+// raised mound at 12-13, column 17 -- are all out of every swing's reach, so
+// there is always somewhere to stand and wait. That is the lesson: this room is
+// about patience, not speed. Linear cherries rain from the canopy and one
 // sweeps the floor from the right to teach what a cherry does before the
 // hovering ones ask you to time it.
 const R4 = [
@@ -172,11 +177,11 @@ const R4 = [
 // The pillar at column 10 looks like it reaches the ground; its bottom two
 // tiles are fake and the fox walks straight through them. That is the kind
 // version, and it happens before anything is at stake. Then the crossing over
-// the spike bed: three stepping stones at columns 14, 16, 18 -- and the middle
-// one is a lie. The 96 px hop from 14 straight to 18 is an ordinary single
-// jump; trusting the middle stone is what kills. A moving platform carries the
-// fox off the last stone, so the room ends on something that is exactly what it
-// appears to be.
+// the spike bed: three stepping stones, at columns 14-15, 16-17 and 18-19, and
+// the middle one is a lie. Stone to stone is a 64 px hop, well inside a single
+// jump; only trusting the middle stone kills. A moving platform then ferries
+// the fox off the last stone to the far bank -- the one object in the room that
+// is exactly what it appears to be, and it still has to be waited for.
 const R5 = [
   '#########################',
   '.........................',

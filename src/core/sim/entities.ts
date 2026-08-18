@@ -1,6 +1,6 @@
 import {
-  BULLET_HALF, FALLBLOCK_SPEED, MAX_PROJECTILES, REFRESHER_RESPAWN, RISEBLOCK_SPEED,
-  SAVE_COOLDOWN, TILE, VIEW_H, VIEW_W,
+  BULLET_HALF, FALLBLOCK_SPEED, HITBOX_B, HITBOX_T, MAX_PROJECTILES, REFRESHER_RESPAWN,
+  RISEBLOCK_SPEED, SAVE_COOLDOWN, TILE, VIEW_H, VIEW_W,
 } from '../constants.js'
 import { boxBlocked, playerBox, type SolidRect } from '../collide.js'
 import { SIN_STEPS, isqrt, lutCos, lutSin, sign } from '../math.js'
@@ -333,8 +333,15 @@ export const BEHAVIOURS: Record<string, Behaviour> = {
   gravflip(w, e, def) {
     if (e.state > 0) { e.state--; return }
     if (!overlapsPlayer(w, e, def)) return
-    w.player.gravDir = -w.player.gravDir
-    w.player.vspeed = 0
+    const p = w.player
+    p.gravDir = -p.gravDir
+    // The hitbox is asymmetric about the origin (-12 above, +8 below), so
+    // mirroring it moves the occupied box 4 px down and buries the player in
+    // whatever they were standing on. Shifting the origin by the same amount
+    // keeps the box exactly where it was, which is what makes the flip read as
+    // the world turning over rather than as the player teleporting.
+    p.y += p.gravDir < 0 ? HITBOX_T + HITBOX_B : -(HITBOX_T + HITBOX_B)
+    p.vspeed = 0
     e.state = 20
   },
 
