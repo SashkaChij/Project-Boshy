@@ -3,7 +3,8 @@ import { validateLevel } from '../src/core/level.js'
 import { createWorld } from '../src/core/sim/world.js'
 import { step } from '../src/core/sim/step.js'
 import { emptyInput, type LevelData } from '../src/core/types.js'
-import { VIEW_H, VIEW_W } from '../src/core/constants.js'
+import { ROOM_H, ROOM_W, TILE, VIEW_H, VIEW_W } from '../src/core/constants.js'
+import { material } from '../src/core/registry/tileMaterials.js'
 
 /**
  * Every authored world is loaded here. buildLevel() throws with the exact row
@@ -76,6 +77,49 @@ describe('authored content', () => {
           .filter((r) => r.saves === 0 && r.i !== world.rooms.length - 1)
           .map((r) => r.i)
         expect(missing).toEqual([])
+      })
+
+      it('has an unobstructed corridor from the left edge to the right edge', () => {
+        // A flood fill through non-solid space, ignoring gravity. It cannot
+        // prove a room is CLEARABLE - that needs a human, or the author's own
+        // verified replay - but it does catch the one catastrophic mistake a
+        // typo produces: a wall of solid tiles with no gap at all.
+        const sealed: number[] = []
+        world.rooms.forEach((room, index) => {
+          if (index === world.rooms.length - 1) return // boss arenas are walled on purpose
+          const open = (tx: number, ty: number): boolean => {
+            const m = material(room.layers.main[ty * ROOM_W + tx] ?? 0)
+            return !m.solid && !m.hazard
+          }
+          const seen = new Uint8Array(ROOM_W * ROOM_H)
+          const stack: [number, number][] = []
+          const seed = (tx: number, ty: number): void => {
+            if (tx < 0 || ty < 0 || tx >= ROOM_W || ty >= ROOM_H) return
+            const i = ty * ROOM_W + tx
+            if (seen[i] || !open(tx, ty)) return
+            seen[i] = 1
+            stack.push([tx, ty])
+          }
+          for (let ty = 0; ty < ROOM_H; ty++) seed(0, ty)
+          // The first room is entered by spawning, not by walking in, so its
+          // left edge is legitimately sealed. Seed from the spawn instead.
+          const spawn = room.entities.find((e) => e.t === 'spawn')
+          if (spawn) seed(Math.floor(spawn.x / TILE), Math.floor(spawn.y / TILE))
+          let reachedRight = false
+          while (stack.length) {
+            const [cx, cy] = stack.pop() as [number, number]
+            if (cx === ROOM_W - 1) { reachedRight = true; break }
+            for (const [nx, ny] of [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]]) {
+              if (nx < 0 || ny < 0 || nx >= ROOM_W || ny >= ROOM_H) continue
+              const i = ny * ROOM_W + nx
+              if (seen[i] || !open(nx, ny)) continue
+              seen[i] = 1
+              stack.push([nx, ny])
+            }
+          }
+          if (!reachedRight) sealed.push(index)
+        })
+        expect(sealed, 'rooms with no open path across').toEqual([])
       })
 
       it('keeps every entity inside its room', () => {
