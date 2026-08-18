@@ -48,4 +48,31 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'error',
     },
   },
+  {
+    // The service worker runs in a worker scope, not a window.
+    files: ['public/sw.js'],
+    languageOptions: {
+      globals: {
+        self: 'readonly', caches: 'readonly', fetch: 'readonly',
+        URL: 'readonly', location: 'readonly', clients: 'readonly',
+        Response: 'readonly', Request: 'readonly',
+      },
+    },
+  },
+  {
+    // Dev scripts run in Node but contain page.evaluate bodies that run in a
+    // browser, so both sets of globals are legitimately in scope here.
+    files: ['tools/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly', console: 'readonly',
+        document: 'readonly', window: 'readonly', location: 'readonly',
+        localStorage: 'readonly', URLSearchParams: 'readonly',
+      },
+    },
+  },
+  {
+    files: ['tests/**/*.ts'],
+    languageOptions: { globals: { structuredClone: 'readonly', console: 'readonly' } },
+  },
 )
