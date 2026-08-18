@@ -1,0 +1,55 @@
+<!doctype html><meta charset="utf-8">
+<body style="background:#0b0b12;margin:0;padding:10px;font:12px system-ui;color:#cfc9bb">
+<div id="out"></div>
+<script type="module">
+import { WORLDS } from '/src/content/index.js'
+import { buildAtlas } from '/src/platform/atlas.js'
+import { ROOM_W, ROOM_H, TILE, VIEW_W, VIEW_H } from '/src/core/constants.js'
+import { ENTITY_DEFS } from '/src/core/registry/entityDefs.js'
+
+const atlas = buildAtlas()
+const out = document.getElementById('out')
+const SPRITE = {
+  spawn:'foxIdle0', save:'save', goal:'goal', warp:'warp', sign:'sign',
+  cherry:'cherry', cherrySine:'cherry', cherryHome:'cherry', cherryBounce:'cherry',
+  minispike:'minispike', turret:'turret', fan:'fan', laser:'laserEmitter',
+  fallblock:'fallblock', riseblock:'riseblock', fakeblock:'fakeblock',
+  invisblock:'invisblock', breakblock:'breakblock', platform:'platformEnt',
+  crusher:'crusher', refresher:'refresher', spring:'spring', gravflip:'gravflip', boss:'boss0',
+}
+const SCALE = new URLSearchParams(location.search).get('world') ? 0.95 : 0.62
+const only = new URLSearchParams(location.search).get('world')
+const SHOWN = only ? WORLDS.filter((w) => w.id === only) : WORLDS
+for (const world of SHOWN) {
+  const h = document.createElement('h2')
+  h.textContent = `${world.id} — ${world.level.meta.title} (${world.level.rooms.length} rooms)`
+  h.style.cssText = 'color:#ffcf4a;font-size:15px;margin:14px 0 6px'
+  out.appendChild(h)
+  const grid = document.createElement('div')
+  grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px'
+  world.level.rooms.forEach((room, i) => {
+    const wrap = document.createElement('div')
+    const c = document.createElement('canvas')
+    c.width = VIEW_W; c.height = VIEW_H
+    c.style.cssText = `width:${VIEW_W*SCALE}px;height:${VIEW_H*SCALE}px;image-rendering:pixelated;outline:1px solid #2a2a3a`
+    const ctx = c.getContext('2d')
+    ctx.imageSmoothingEnabled = false
+    ctx.fillStyle = room.bg.color; ctx.fillRect(0,0,VIEW_W,VIEW_H)
+    for (const layer of ['bg','main','fg'])
+      for (let ty=0;ty<ROOM_H;ty++) for (let tx=0;tx<ROOM_W;tx++)
+        atlas.drawTile(ctx, room.layers[layer][ty*ROOM_W+tx]||0, tx*TILE, ty*TILE)
+    for (const e of room.entities) {
+      const key = SPRITE[e.t]
+      if (key) atlas.draw(ctx, key, e.x, e.y, false)
+      else { const d=ENTITY_DEFS[e.t]; ctx.fillStyle='#f0f'; ctx.fillRect(e.x-(d?.w??16)/2,e.y-(d?.h??16)/2,d?.w??16,d?.h??16) }
+    }
+    const cap = document.createElement('div')
+    const kinds = [...new Set(room.entities.map(e=>e.t))].join(' ')
+    cap.textContent = `${i}: ${kinds}`
+    cap.style.cssText = 'font-size:10px;color:#8a8578;width:'+(VIEW_W*SCALE)+'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'
+    wrap.append(c, cap); grid.appendChild(wrap)
+  })
+  out.appendChild(grid)
+}
+document.title = 'ready:' + SHOWN.length
+</script></body>

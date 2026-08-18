@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="crispEdges">
+  <rect width="64" height="64" fill="#0d0d14"/>
+  <!-- Original fox mark: ears, muzzle, eyes. Drawn as blocks to match the
+       in-game pixel art rather than being a smooth vector. -->
+  <g fill="#e2721f">
+    <rect x="12" y="14" width="8" height="10"/>
+    <rect x="44" y="14" width="8" height="10"/>
+    <rect x="14" y="22" width="36" height="24"/>
+    <rect x="20" y="46" width="24" height="6"/>
+  </g>
+  <g fill="#f4f0e6">
+    <rect x="26" y="40" width="12" height="10"/>
+    <rect x="14" y="16" width="4" height="6"/>
+    <rect x="46" y="16" width="4" height="6"/>
+  </g>
+  <g fill="#141018">
+    <rect x="20" y="28" width="6" height="6"/>
+    <rect x="38" y="28" width="6" height="6"/>
+    <rect x="29" y="40" width="6" height="4"/>
+  </g>
+</svg>

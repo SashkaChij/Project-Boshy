@@ -1,0 +1,19 @@
+{
+  "name": "I WANNA BE THE FOX",
+  "short_name": "FOX",
+  "description": "A brutally hard browser platformer with a level editor. Inspired by the IWBTG fangame genre.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#07070c",
+  "theme_color": "#0d0d14",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
