@@ -200,9 +200,12 @@ export function attachTouch(acc: InputAccumulator, host: HTMLElement): TouchCont
   root.className = 'fox-touch'
   root.hidden = true
 
+  // The safe-area probe lives OUTSIDE the deck: `root` is display:none while
+  // the deck is hidden, and computed styles inside a hidden subtree are not
+  // worth trusting across engines.
   const probe = doc.createElement('div')
   probe.className = 'fox-touch-probe'
-  root.appendChild(probe)
+  host.appendChild(probe)
 
   const buttons = {} as Record<BtnKey, HTMLDivElement>
   for (const key of KEYS) {
@@ -508,31 +511,50 @@ export function attachTouch(acc: InputAccumulator, host: HTMLElement): TouchCont
 
     // --- FALLBACK: a deck under the game. The shell shrinks the play area by
     // `reserve` so the buttons never sit on top of it.
-    const deckH = clamp(Math.round(view.viewH * 0.28), 3 * PAD + MIN_TOUCH, 190)
-    const top = view.viewH - inset.bottom - deckH
-    const bh = deckH - 2 * PAD
     const x0 = inset.left + PAD
     const x1 = view.viewW - inset.right - PAD
     const W = Math.max(3 * MIN_TOUCH, x1 - x0)
+    const restartH = MIN_TOUCH + 4
 
-    // Three columns: directions | restart | fire. The middle one exists only
-    // so RESTART is never adjacent to a button pressed mid-run.
-    const dTotal = Math.min(Math.round(W * 0.4), 260)
-    const cw = Math.min(Math.round(W * 0.16), 84)
-    const rw = W - dTotal - cw
+    // Widths are allocated, not divided: SHOOT takes its 44 px floor first and
+    // JUMP absorbs the remainder, because JUMP is the button that must never
+    // be missed. Proportional splitting alone produces a 32 px SHOOT on a
+    // 360 px phone.
+    const fireW = clamp(Math.round(W * 0.42), 2 * MIN_TOUCH + GAP, 300)
+    const sw = Math.max(MIN_TOUCH, Math.round((fireW - GAP) * 0.44))
+    const jw = Math.max(MIN_TOUCH, fireW - GAP - sw)
+    const fire = jw + GAP + sw
+    const dTotal = clamp(Math.min(Math.round(W * 0.4), W - fire - GAP), 2 * MIN_TOUCH, 260)
+
+    // RESTART belongs in the dead space between the directions and the fire
+    // buttons -- never next to either. If that gap cannot hold it, the deck
+    // grows a second row rather than letting a mis-hit end someone's run.
+    const mid = W - dTotal - fire
+    const twoRow = mid < MIN_TOUCH + 2 * GAP
+    const extra = twoRow ? restartH + GAP : 0
+
+    const deckH = Math.min(
+      clamp(Math.round(view.viewH * 0.28), 3 * PAD + MIN_TOUCH, 190) + extra,
+      Math.round(view.viewH * 0.46),
+    )
+    const top = view.viewH - inset.bottom - deckH
+    const rowY = top + PAD + extra
+    const bh = Math.max(MIN_TOUCH, deckH - 2 * PAD - extra)
 
     const half = Math.round(dTotal / 2)
-    rects.left = rect(x0, top + PAD, half, bh)
-    rects.right = rect(x0 + half, top + PAD, dTotal - half, bh)
+    rects.left = rect(x0, rowY, half, bh)
+    rects.right = rect(x0 + half, rowY, dTotal - half, bh)
 
-    const jw = Math.max(MIN_TOUCH, Math.round((rw - GAP) * 0.58))
-    const sw = Math.max(MIN_TOUCH, rw - GAP - jw)
     const sh = Math.max(MIN_TOUCH, Math.round(bh * 0.8))
-    rects.jump = rect(x1 - jw, top + PAD, jw, bh)
-    rects.shoot = rect(x1 - jw - GAP - sw, top + PAD + (bh - sh), sw, sh)
+    rects.jump = rect(x1 - jw, rowY, jw, bh)
+    rects.shoot = rect(x1 - jw - GAP - sw, rowY + (bh - sh), sw, sh)
 
-    const rrw = clamp(cw - GAP, MIN_TOUCH, 84)
-    rects.restart = rect(x0 + dTotal + (cw - rrw) / 2, top + PAD, rrw, MIN_TOUCH + 4)
+    const rrw = twoRow
+      ? clamp(Math.min(W, 72), MIN_TOUCH, 84)
+      : clamp(mid - 2 * GAP, MIN_TOUCH, 84)
+    rects.restart = twoRow
+      ? rect(x1 - rrw, top + PAD, rrw, restartH)
+      : rect(x0 + dTotal + (mid - rrw) / 2, rowY, rrw, restartH)
     return { rects, reserve: deckH }
   }
 
@@ -585,6 +607,7 @@ export function attachTouch(acc: InputAccumulator, host: HTMLElement): TouchCont
       host.removeEventListener('gesturechange', stop)
       host.removeEventListener('gestureend', stop)
       root.remove()
+      probe.remove()
       styleUsers = Math.max(0, styleUsers - 1)
       if (styleUsers === 0) doc.getElementById(STYLE_ID)?.remove()
     },

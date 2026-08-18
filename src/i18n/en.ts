@@ -225,7 +225,7 @@ export const EN: Record<string, string> = {
   'gallery.verified': 'Verified',
   'gallery.unverified': 'Not verified',
   'gallery.report': 'Report',
-  'gallery.reportHint': 'Report a level that copies someone else’s work.',
+  'gallery.reportHint': 'Report a level that copies work by someone else.',
 
   'common.ok': 'OK',
   'common.cancel': 'Cancel',

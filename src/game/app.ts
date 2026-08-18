@@ -14,7 +14,7 @@ import { InputAccumulator } from '../platform/input/state.js'
 import { attachTouch, type TouchController } from '../platform/input/touch.js'
 import { ParticleField } from '../platform/particles.js'
 import { createRenderer, type Renderer } from '../platform/renderer2d.js'
-import { getSettings, loadSettings, recordClear, saveSettings } from '../platform/storage.js'
+import { getSettings, listLevels, loadSettings, recordClear, saveSettings } from '../platform/storage.js'
 import { drawText, measureText, textHeight } from '../platform/text.js'
 import { drawHud } from './hud.js'
 import { DEFAULT_THEME, Menu, drawBar, type MenuItem } from './ui.js'
@@ -336,7 +336,6 @@ export class App {
   }
 
   private async refreshGallery(): Promise<void> {
-    const { listLevels } = await import('../platform/storage.js')
     const stored = await listLevels()
     this.galleryLevels = stored.map((s) => ({ id: s.id, title: s.title, data: s.data }))
     const items: MenuItem[] = this.galleryLevels.map((lv) => ({

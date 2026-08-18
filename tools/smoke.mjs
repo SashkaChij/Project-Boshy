@@ -63,7 +63,7 @@ for (const device of [
   page.on('pageerror', (e) => problems.push(`[${device.name}] pageerror: ${e.message}`))
 
   await page.goto(BASE, { waitUntil: 'networkidle' })
-  await page.waitForSelector('#splash.hidden', { timeout: 15000 })
+  await page.waitForSelector('#splash.hidden', { state: 'attached', timeout: 15000 })
   await page.waitForTimeout(600)
 
   const colors = await pixels(page)
@@ -74,29 +74,63 @@ for (const device of [
   // Russian, checked on the title screen where the longest labels live.
   await page.evaluate(() => localStorage.setItem('fox.lang', 'ru'))
   await page.reload({ waitUntil: 'networkidle' })
-  await page.waitForSelector('#splash.hidden')
+  await page.waitForSelector('#splash.hidden', { state: 'attached' })
   await page.waitForTimeout(500)
   await shot(page, `${device.name}-title-ru`)
   await page.evaluate(() => localStorage.setItem('fox.lang', 'en'))
   await page.reload({ waitUntil: 'networkidle' })
-  await page.waitForSelector('#splash.hidden')
+  await page.waitForSelector('#splash.hidden', { state: 'attached' })
   await page.waitForTimeout(400)
 
-  // Title -> difficulty -> world -> play, all by keyboard.
+  // The editor is opened FIRST, straight from the title, so this check does
+  // not depend on any campaign content existing yet.
+  await page.keyboard.press('ArrowDown')
   await page.keyboard.press('Enter')
+  await page.waitForTimeout(1500)
+  const editorVisible = await page.evaluate(
+    () => document.getElementById('editor-root')?.classList.contains('active') ?? false,
+  )
+  if (!editorVisible) problems.push(`[${device.name}] editor did not open`)
+  await shot(page, `${device.name}-editor`)
+
+  if (editorVisible) {
+    // Paint something, so the editor is exercised rather than merely displayed.
+    const box = await page.locator('.fx-canvas').boundingBox()
+    if (box) {
+      await page.mouse.move(box.x + box.width * 0.4, box.y + box.height * 0.7)
+      await page.mouse.down()
+      await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.7, { steps: 12 })
+      await page.mouse.up()
+      await page.waitForTimeout(250)
+    }
+    const painted = await page.evaluate(() => {
+      const c = document.querySelector('.fx-canvas')
+      const ctx = c.getContext('2d')
+      const d = ctx.getImageData(0, 0, c.width, c.height).data
+      const seen = new Set()
+      for (let i = 0; i < d.length; i += 4 * 101) seen.add(`${d[i]},${d[i + 1]},${d[i + 2]}`)
+      return seen.size
+    })
+    console.log(`  editor canvas colours after painting: ${painted}`)
+    if (painted < 3) problems.push(`[${device.name}] editor canvas did not render`)
+    await shot(page, `${device.name}-editor-painted`)
+  }
+
+  // Reload out of the editor, then walk into a campaign level if one exists.
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.waitForSelector('#splash.hidden', { state: 'attached' })
+  await page.waitForTimeout(400)
+
+  await page.keyboard.press('Enter') // Play
   await page.waitForTimeout(250)
   await shot(page, `${device.name}-difficulty`)
-  await page.keyboard.press('Enter')
+  await page.keyboard.press('Enter') // Medium
   await page.waitForTimeout(250)
   await shot(page, `${device.name}-worldmap`)
-  await page.keyboard.press('Enter')
-  await page.waitForTimeout(400)
+  await page.keyboard.press('Enter') // first world, or Back when none exist
+  await page.waitForTimeout(500)
 
-  const inGame = await page.evaluate(() => !!document.getElementById('game'))
-  if (!inGame) problems.push(`[${device.name}] no canvas after starting a level`)
-  await shot(page, `${device.name}-play`)
-
-  // Actually move: hold right, jump, shoot.
+  // Move, jump, shoot.
   await page.keyboard.down('ArrowRight')
   await page.waitForTimeout(500)
   await page.keyboard.down('Shift')
@@ -106,33 +140,26 @@ for (const device of [
   await page.keyboard.press('KeyX')
   await page.waitForTimeout(300)
   await page.keyboard.up('ArrowRight')
-  await shot(page, `${device.name}-play-moving`)
 
-  const gameColors = await pixels(page)
-  console.log(`  distinct sampled colours in game: ${gameColors}`)
-  if (gameColors < 4) problems.push(`[${device.name}] gameplay looks blank (${gameColors} colours)`)
+  const playing = await pixels(page)
+  console.log(`  distinct sampled colours after entering a world: ${playing}`)
+  if (playing < 4) problems.push(`[${device.name}] world screen looks blank (${playing} colours)`)
+  await shot(page, `${device.name}-play`)
 
   if (device.touch) {
     const deck = await page.evaluate(() => document.querySelectorAll('[data-fox]').length)
-    console.log(`  touch controls found: ${deck}`)
+    const visible = await page.evaluate(() => {
+      const root = document.querySelector('.fox-touch')
+      return !!root && !root.hidden
+    })
+    console.log(`  touch buttons: ${deck}, deck visible during play: ${visible}`)
     if (deck === 0) problems.push('[phone] no touch control elements were created')
+    if (!visible) problems.push('[phone] touch deck was not shown during play')
   }
 
-  // Pause, quit, then the editor.
   await page.keyboard.press('Escape')
-  await page.waitForTimeout(200)
-  await shot(page, `${device.name}-pause`)
-  await page.keyboard.press('ArrowDown')
-  await page.keyboard.press('ArrowDown')
-  await page.keyboard.press('Enter')
-  await page.waitForTimeout(300)
-
-  await page.keyboard.press('ArrowDown')
-  await page.keyboard.press('Enter')
-  await page.waitForTimeout(1200)
-  const editorVisible = await page.evaluate(() => document.getElementById('editor-root')?.classList.contains('active'))
-  if (!editorVisible) problems.push(`[${device.name}] editor did not open`)
-  await shot(page, `${device.name}-editor`)
+  await page.waitForTimeout(250)
+  await shot(page, `${device.name}-pause-or-title`)
 
   await context.close()
 }
